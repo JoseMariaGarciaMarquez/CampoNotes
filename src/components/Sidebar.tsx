@@ -1,17 +1,21 @@
 import { useRef, useState } from 'react';
 import { useStore } from '../store';
 import { dist, angle, bearing } from '../utils/geometry';
+import type { ScaleRef } from '../types';
 
 const inputCls = "w-full text-[10px] bg-slate-800 border border-slate-700 rounded px-1.5 py-0.5 text-slate-300 placeholder-slate-600 focus:outline-none focus:border-blue-500";
 
-function LineItem({ line, isSelected, onSelect, onUpdate, onRemove }: {
+function LineItem({ line, isSelected, onSelect, onUpdate, onRemove, scale }: {
   line: any; isSelected: boolean;
   onSelect: () => void; onUpdate: (d: any) => void; onRemove: () => void;
+  scale?: ScaleRef;
 }) {
   const ang = angle(line.x1, line.y1, line.x2, line.y2);
   const { addPhoto, removePhoto } = useStore();
   const photoInputRef = useRef<HTMLInputElement>(null);
   const [showDetail, setShowDetail] = useState(false);
+  const [editingLen, setEditingLen] = useState(false);
+  const [lenInput, setLenInput] = useState('');
 
   const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -22,6 +26,20 @@ function LineItem({ line, isSelected, onSelect, onUpdate, onRemove }: {
     };
     reader.readAsDataURL(file);
     e.target.value = '';
+  };
+
+  const handleLenSubmit = () => {
+    const newMeters = parseFloat(lenInput);
+    if (!scale || isNaN(newMeters) || newMeters <= 0) {
+      setEditingLen(false);
+      return;
+    }
+    const angRad = Math.atan2(line.y2 - line.y1, line.x2 - line.x1);
+    const newPx = newMeters * scale.pixels / scale.meters;
+    const nx2 = line.x1 + Math.cos(angRad) * newPx;
+    const ny2 = line.y1 + Math.sin(angRad) * newPx;
+    onUpdate({ x2: nx2, y2: ny2, lengthMeters: newMeters });
+    setEditingLen(false);
   };
 
   const inp = (label: string, key: string, val: any, opts?: { type?: string; placeholder?: string; step?: string }) => (
@@ -48,9 +66,31 @@ function LineItem({ line, isSelected, onSelect, onUpdate, onRemove }: {
       <div className="flex items-center gap-2">
         <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: line.color }} />
         <span className="font-medium text-sm text-white">{line.label}</span>
-        <span className="text-xs text-slate-500 ml-auto">
-          {line.lengthMeters != null ? `${line.lengthMeters.toFixed(1)}m` : '—'}
-        </span>
+        {scale && line.lengthMeters != null && !editingLen ? (
+          <button
+            onClick={(e) => { e.stopPropagation(); setEditingLen(true); setLenInput(line.lengthMeters!.toFixed(1)); }}
+            className="text-xs text-slate-400 hover:text-white ml-auto tabular-nums bg-slate-800 hover:bg-slate-700 rounded px-1.5 py-0.5 transition-colors"
+            title="Clic para editar longitud"
+          >
+            {line.lengthMeters!.toFixed(1)}m ✎
+          </button>
+        ) : scale && editingLen ? (
+          <div className="flex items-center gap-0.5 ml-auto" onClick={e => e.stopPropagation()}>
+            <input
+              type="number" step="any" min="0.1" value={lenInput}
+              onChange={e => setLenInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleLenSubmit(); if (e.key === 'Escape') setEditingLen(false); }}
+              onBlur={handleLenSubmit}
+              className="w-16 text-[10px] bg-slate-800 border border-blue-500 rounded px-1 py-0.5 text-white text-right tabular-nums focus:outline-none"
+              autoFocus
+            />
+            <span className="text-[10px] text-slate-400">m</span>
+          </div>
+        ) : (
+          <span className="text-xs text-slate-500 ml-auto">
+            {line.lengthMeters != null ? `${line.lengthMeters.toFixed(1)}m` : '—'}
+          </span>
+        )}
       </div>
       <div className="text-xs text-slate-500 mt-0.5">{ang.toFixed(1)}° {bearing(ang)}</div>
 
@@ -158,13 +198,13 @@ export default function Sidebar({ isMobile: propIsMobile }: { isMobile?: boolean
   const isMobile = propIsMobile ?? (typeof window !== 'undefined' && window.innerWidth < 768);
   const scale = proj?.scale;
 
-  const projInp = (label: string, key: string, val: string | undefined, opts?: { type?: string; placeholder?: string }) => (
+  const projInp = (label: string, key: string, val: string | undefined) => (
     <input
-      type={opts?.type ?? 'text'}
+      type="text"
       value={val || ''}
       onChange={e => proj && setProjectAttr(proj.id, { [key]: e.target.value || undefined })}
       className="text-xs bg-slate-800 border border-slate-700 rounded px-1.5 py-0.5 text-slate-300 placeholder-slate-600 w-full"
-      placeholder={opts?.placeholder ?? label}
+      placeholder={label}
     />
   );
 
@@ -207,6 +247,7 @@ export default function Sidebar({ isMobile: propIsMobile }: { isMobile?: boolean
             onSelect={() => setSelectedLine(line.id === selectedLineId ? null : line.id)}
             onUpdate={(d) => updateLine(line.id, d)}
             onRemove={() => removeLine(line.id)}
+            scale={scale}
           />
         ))}
       </div>
