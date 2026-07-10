@@ -211,22 +211,14 @@ export default function Canvas() {
         setReferenceLine(clicked.id);
         return;
       }
-      if (refLine) {
+      if (refLine && tool === 'parallel') {
         const snapped = snapToEndpoint(pos.x, pos.y, lines);
         const p = snapped.snap ? snapped : pos;
-        if (tool === 'parallel') {
-          const pd = parallelLineData(refLine.x1, refLine.y1, refLine.x2, refLine.y2, p.x, p.y);
-          addLine({
-            x1: pd.x1, y1: pd.y1, x2: pd.x2, y2: pd.y2,
-            notes: `Paralela a ${refLine.label} d=${(pd.distance / (scale?.pixels ?? 1) * (scale?.meters ?? 1)).toFixed(1)}m`,
-          });
-        } else {
-          const pd = perpendicularLineData(refLine.x1, refLine.y1, refLine.x2, refLine.y2, p.x, p.y);
-          addLine({
-            x1: pd.x1, y1: pd.y1, x2: pd.x2, y2: pd.y2,
-            notes: `Perpendicular a ${refLine.label}`,
-          });
-        }
+        const pd = parallelLineData(refLine.x1, refLine.y1, refLine.x2, refLine.y2, p.x, p.y);
+        addLine({
+          x1: pd.x1, y1: pd.y1, x2: pd.x2, y2: pd.y2,
+          notes: `Paralela a ${refLine.label} d=${(pd.distance / (scale?.pixels ?? 1) * (scale?.meters ?? 1)).toFixed(1)}m`,
+        });
         setReferenceLine(null);
       }
     }
@@ -263,7 +255,16 @@ export default function Canvas() {
       setDrawing(true);
       setFreehandPoints([pos.x, pos.y]);
     }
-  }, [tool, setDrawingStart, lines]);
+
+    if (tool === 'perpendicular' && refLine) {
+      const clickedLine = lines.find(l => hitTestLine(pos.x, pos.y, l.x1, l.y1, l.x2, l.y2));
+      if (!clickedLine) {
+        const foot = projectPointOnLine(pos.x, pos.y, refLine.x1, refLine.y1, refLine.x2, refLine.y2);
+        setDrawing(true);
+        setDrawingStart({ x: foot.x, y: foot.y });
+      }
+    }
+  }, [tool, setDrawingStart, lines, refLine]);
 
   const handleMove = useCallback((e: any) => {
     const pos = getWorldPos(e);
@@ -305,7 +306,21 @@ export default function Canvas() {
       const snapped = snapToEndpoint(pos.x, pos.y, lines);
       const p = snapped.snap ? snapped : pos;
       setPreview({ x1: drawingStart.x, y1: drawingStart.y, x2: p.x, y2: p.y });
-    } else if ((tool === 'parallel' || tool === 'perpendicular') && refLine) {
+    } else if (tool === 'perpendicular' && drawing && drawingStart && refLine) {
+      const rdx = refLine.x2 - refLine.x1;
+      const rdy = refLine.y2 - refLine.y1;
+      const rlen = Math.sqrt(rdx * rdx + rdy * rdy);
+      if (rlen > 0) {
+        const ux = -rdy / rlen;
+        const uy = rdx / rlen;
+        const dx = pos.x - drawingStart.x;
+        const dy = pos.y - drawingStart.y;
+        const t = dx * ux + dy * uy;
+        const ex = drawingStart.x + t * ux;
+        const ey = drawingStart.y + t * uy;
+        setPreview({ x1: drawingStart.x, y1: drawingStart.y, x2: ex, y2: ey });
+      }
+    } else if ((tool === 'parallel' || tool === 'perpendicular') && refLine && !drawing) {
       const snapped = snapToEndpoint(pos.x, pos.y, lines);
       const p = snapped.snap ? snapped : pos;
       if (tool === 'parallel') {
@@ -347,6 +362,31 @@ export default function Canvas() {
       }
       setDrawing(false);
       setDrawingStart(null);
+      setPreview(null);
+      setSnapPt(null);
+    } else if (tool === 'perpendicular' && drawing && drawingStart && pos) {
+      const d = dist(drawingStart.x, drawingStart.y, pos.x, pos.y);
+      if (d > 10) {
+        const rdx = refLine!.x2 - refLine!.x1;
+        const rdy = refLine!.y2 - refLine!.y1;
+        const rlen = Math.sqrt(rdx * rdx + rdy * rdy);
+        if (rlen > 0) {
+          const ux = -rdy / rlen;
+          const uy = rdx / rlen;
+          const dx = pos.x - drawingStart.x;
+          const dy = pos.y - drawingStart.y;
+          const t = dx * ux + dy * uy;
+          const ex = drawingStart.x + t * ux;
+          const ey = drawingStart.y + t * uy;
+          addLine({
+            x1: drawingStart.x, y1: drawingStart.y, x2: ex, y2: ey,
+            notes: `Perpendicular a ${refLine!.label}`,
+          });
+        }
+      }
+      setDrawing(false);
+      setDrawingStart(null);
+      setReferenceLine(null);
       setPreview(null);
       setSnapPt(null);
     }
@@ -426,10 +466,10 @@ export default function Canvas() {
           {tool === 'perpendicular' && `${tapVerb()} una línea como referencia`}
         </span>
       )}
-      {refLine && (
+      {refLine && (tool === 'parallel' || (tool === 'perpendicular' && !drawing)) && (
         <span className="bg-slate-900/80 px-3 py-1.5 rounded-lg text-sm text-amber-300">
           {tool === 'parallel' && `${refLine.label}: ${tapVerb()} el lienzo para crear paralela`}
-          {tool === 'perpendicular' && `${refLine.label}: ${tapVerb()} el lienzo para crear perpendicular`}
+          {tool === 'perpendicular' && `${refLine.label}: arrastra desde la línea para crear perpendicular`}
         </span>
       )}
     </div>
