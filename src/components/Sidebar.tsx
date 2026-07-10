@@ -2,14 +2,16 @@ import { useRef, useState } from 'react';
 import { useStore } from '../store';
 import { dist, angle, bearing } from '../utils/geometry';
 
+const inputCls = "w-full text-[10px] bg-slate-800 border border-slate-700 rounded px-1.5 py-0.5 text-slate-300 placeholder-slate-600 focus:outline-none focus:border-blue-500";
+
 function LineItem({ line, isSelected, onSelect, onUpdate, onRemove }: {
   line: any; isSelected: boolean;
   onSelect: () => void; onUpdate: (d: any) => void; onRemove: () => void;
 }) {
-  const len = dist(line.x1, line.y1, line.x2, line.y2);
   const ang = angle(line.x1, line.y1, line.x2, line.y2);
   const { addPhoto, removePhoto } = useStore();
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const [showDetail, setShowDetail] = useState(false);
 
   const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -21,6 +23,20 @@ function LineItem({ line, isSelected, onSelect, onUpdate, onRemove }: {
     reader.readAsDataURL(file);
     e.target.value = '';
   };
+
+  const inp = (label: string, key: string, val: any, opts?: { type?: string; placeholder?: string; step?: string }) => (
+    <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+      <span className="text-[9px] text-slate-500 w-14 shrink-0">{label}</span>
+      <input
+        type={opts?.type ?? 'text'}
+        step={opts?.step}
+        value={val ?? ''}
+        placeholder={opts?.placeholder ?? ''}
+        onChange={e => onUpdate({ [key]: e.target.value === '' ? undefined : (opts?.type === 'number' ? parseFloat(e.target.value) : e.target.value) })}
+        className={inputCls}
+      />
+    </div>
+  );
 
   return (
     <div
@@ -42,19 +58,18 @@ function LineItem({ line, isSelected, onSelect, onUpdate, onRemove }: {
       <div className="flex gap-1 mt-1.5" onClick={e => e.stopPropagation()}>
         <input type="number" step="any" value={line.lat1 ?? ''} placeholder="Lat ini"
           onChange={e => onUpdate({ lat1: e.target.value ? parseFloat(e.target.value) : undefined })}
-          className="w-full text-[10px] bg-slate-800 border border-slate-700 rounded px-1.5 py-0.5 text-slate-300 placeholder-slate-600 focus:outline-none focus:border-blue-500" />
+          className={inputCls} />
         <input type="number" step="any" value={line.lng1 ?? ''} placeholder="Lng ini"
           onChange={e => onUpdate({ lng1: e.target.value ? parseFloat(e.target.value) : undefined })}
-          className="w-full text-[10px] bg-slate-800 border border-slate-700 rounded px-1.5 py-0.5 text-slate-300 placeholder-slate-600 focus:outline-none focus:border-blue-500" />
+          className={inputCls} />
       </div>
-      {/* GPS end */}
       <div className="flex gap-1" onClick={e => e.stopPropagation()}>
         <input type="number" step="any" value={line.lat2 ?? ''} placeholder="Lat fin"
           onChange={e => onUpdate({ lat2: e.target.value ? parseFloat(e.target.value) : undefined })}
-          className="w-full text-[10px] bg-slate-800 border border-slate-700 rounded px-1.5 py-0.5 text-slate-300 placeholder-slate-600 focus:outline-none focus:border-blue-500" />
+          className={inputCls} />
         <input type="number" step="any" value={line.lng2 ?? ''} placeholder="Lng fin"
           onChange={e => onUpdate({ lng2: e.target.value ? parseFloat(e.target.value) : undefined })}
-          className="w-full text-[10px] bg-slate-800 border border-slate-700 rounded px-1.5 py-0.5 text-slate-300 placeholder-slate-600 focus:outline-none focus:border-blue-500" />
+          className={inputCls} />
       </div>
 
       <input
@@ -83,6 +98,32 @@ function LineItem({ line, isSelected, onSelect, onUpdate, onRemove }: {
         </button>
       </div>
 
+      {/* Detail toggle */}
+      <button
+        onClick={(e) => { e.stopPropagation(); setShowDetail(!showDetail); }}
+        className="mt-1.5 w-full text-[10px] text-slate-500 hover:text-slate-300 text-left flex items-center gap-1"
+      >
+        <span>{showDetail ? '▾' : '▸'}</span> Detalle de línea
+      </button>
+
+      {showDetail && (
+        <div className="mt-1.5 space-y-1" onClick={e => e.stopPropagation()}>
+          {inp('Azimut', 'azimuth', line.azimuth, { type: 'number', placeholder: '°', step: 'any' })}
+          {inp('Elevación', 'elevation', line.elevation, { type: 'number', placeholder: 'm', step: 'any' })}
+          {inp('Estaciones', 'stationCount', line.stationCount, { type: 'number', placeholder: '#', step: '1' })}
+          {inp('Sep. electro.', 'stationSpacing', line.stationSpacing, { type: 'number', placeholder: 'm', step: 'any' })}
+          {inp('Terreno', 'terrain', line.terrain, { placeholder: 'arcilloso, arenoso...' })}
+          {inp('Topografía', 'topography', line.topography, { placeholder: 'plana, con ladera...' })}
+          {inp('Profundidad', 'depth', line.depth, { placeholder: 'máx investigada' })}
+          <div className="text-[9px] text-slate-500 uppercase pt-1 border-t border-slate-800">Parámetros del método</div>
+          {inp('Rango freq.', 'frequencyRange', line.frequencyRange, { placeholder: 'ej: 0.5-20 Hz' })}
+          {inp('Ventana t.', 'timeWindow', line.timeWindow, { placeholder: 'ej: 1024 ms' })}
+          {inp('Stacks', 'stackCount', line.stackCount, { placeholder: 'ej: 4' })}
+          {inp('Modo', 'surveyMode', line.surveyMode, { placeholder: 'Reflexión, CMP...' })}
+          {inp('Antena', 'antennaFreq', line.antennaFreq, { placeholder: 'ej: 100 MHz' })}
+        </div>
+      )}
+
       {/* Photos */}
       <div className="flex flex-wrap gap-1 mt-1.5">
         {line.photos?.map((ph: any) => (
@@ -109,14 +150,23 @@ function LineItem({ line, isSelected, onSelect, onUpdate, onRemove }: {
 export default function Sidebar({ isMobile: propIsMobile }: { isMobile?: boolean }) {
   const {
     lines, selectedLineId, setSelectedLine, removeLine, updateLine,
-    projects, currentProjectId, setCurrentProject, addProject,
-    toggleSidebar, showSidebar,
+    projects, currentProjectId, toggleSidebar, showSidebar,
     setProjectAttr,
   } = useStore();
 
   const proj = projects.find(p => p.id === currentProjectId);
   const isMobile = propIsMobile ?? (typeof window !== 'undefined' && window.innerWidth < 768);
   const scale = proj?.scale;
+
+  const projInp = (label: string, key: string, val: string | undefined, opts?: { type?: string; placeholder?: string }) => (
+    <input
+      type={opts?.type ?? 'text'}
+      value={val || ''}
+      onChange={e => proj && setProjectAttr(proj.id, { [key]: e.target.value || undefined })}
+      className="text-xs bg-slate-800 border border-slate-700 rounded px-1.5 py-0.5 text-slate-300 placeholder-slate-600 w-full"
+      placeholder={opts?.placeholder ?? label}
+    />
+  );
 
   const panel = (
     <div className="flex flex-col overflow-hidden h-full">
@@ -129,16 +179,17 @@ export default function Sidebar({ isMobile: propIsMobile }: { isMobile?: boolean
         {scale && (
           <div className="text-xs text-amber-400/80">Escala: {scale.meters}m / {scale.pixels.toFixed(0)}px</div>
         )}
-        {/* Field attributes */}
         <div className="grid grid-cols-2 gap-1.5">
           <input type="date" value={proj?.date || ''} onChange={e => proj && setProjectAttr(proj.id, { date: e.target.value })}
             className="text-xs bg-slate-800 border border-slate-700 rounded px-1.5 py-0.5 text-slate-300" placeholder="Fecha" />
-          <input type="text" value={proj?.operator || ''} onChange={e => proj && setProjectAttr(proj.id, { operator: e.target.value })}
-            className="text-xs bg-slate-800 border border-slate-700 rounded px-1.5 py-0.5 text-slate-300 placeholder-slate-600" placeholder="Operador" />
-          <input type="text" value={proj?.equipment || ''} onChange={e => proj && setProjectAttr(proj.id, { equipment: e.target.value })}
-            className="text-xs bg-slate-800 border border-slate-700 rounded px-1.5 py-0.5 text-slate-300 placeholder-slate-600" placeholder="Equipo" />
-          <input type="text" value={proj?.weather || ''} onChange={e => proj && setProjectAttr(proj.id, { weather: e.target.value })}
-            className="text-xs bg-slate-800 border border-slate-700 rounded px-1.5 py-0.5 text-slate-300 placeholder-slate-600" placeholder="Clima" />
+          {projInp('Operador', 'operator', proj?.operator)}
+          {projInp('Equipo', 'equipment', proj?.equipment)}
+          {projInp('Clima', 'weather', proj?.weather)}
+          {projInp('Cliente', 'client', proj?.client)}
+          {projInp('Objetivo', 'objective', proj?.objective)}
+          {projInp('Ubicación', 'location', proj?.location)}
+          {projInp('Municipio', 'municipality', proj?.municipality)}
+          {projInp('Estado', 'state', proj?.state)}
         </div>
       </div>
 

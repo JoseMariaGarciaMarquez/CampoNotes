@@ -63,7 +63,7 @@ export interface StoreState {
   setCurrentProject: (id: string) => void;
   deleteProject: (id: string) => void;
   renameProject: (id: string, name: string) => void;
-  setProjectAttr: (id: string, attr: Partial<Pick<Project, 'operator' | 'date' | 'weather' | 'equipment'>>) => void;
+  setProjectAttr: (id: string, attr: Partial<Pick<Project, 'operator' | 'date' | 'weather' | 'equipment' | 'client' | 'objective' | 'location' | 'municipality' | 'state'>>) => void;
 
   addLine: (data: {
     x1: number; y1: number; x2: number; y2: number;

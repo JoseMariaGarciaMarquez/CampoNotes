@@ -11,6 +11,18 @@ export interface LineData {
   color: string;
   method: string;
   photos: PhotoData[];
+  azimuth?: number;
+  stationCount?: number;
+  stationSpacing?: number;
+  terrain?: string;
+  topography?: string;
+  elevation?: number;
+  frequencyRange?: string;
+  timeWindow?: string;
+  stackCount?: string;
+  surveyMode?: string;
+  antennaFreq?: string;
+  depth?: string;
 }
 
 export interface PhotoData {
@@ -44,6 +56,11 @@ export interface Project {
   date?: string;
   weather?: string;
   equipment?: string;
+  client?: string;
+  objective?: string;
+  location?: string;
+  municipality?: string;
+  state?: string;
   sheetWidth?: number;
   sheetHeight?: number;
   createdAt: number;
