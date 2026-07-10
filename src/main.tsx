@@ -11,8 +11,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 
 // Clear old service worker caches and register fresh
 if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(regs =>
+    Promise.all(regs.map(r => r.unregister()))
+  )
   caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))))
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/CampoNotes/sw.js').catch(() => {})
-  })
 }
