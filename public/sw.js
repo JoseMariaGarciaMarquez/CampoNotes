@@ -1,4 +1,4 @@
-const CACHE = 'camponotes-v3';
+const CACHE = 'camponotes-v4';
 
 self.addEventListener('install', () => {
   self.skipWaiting();

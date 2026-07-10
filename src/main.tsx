@@ -13,6 +13,6 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 if ('serviceWorker' in navigator) {
   caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))))
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {})
+    navigator.serviceWorker.register('/CampoNotes/sw.js').catch(() => {})
   })
 }
