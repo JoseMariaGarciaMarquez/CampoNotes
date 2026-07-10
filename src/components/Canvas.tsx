@@ -218,7 +218,7 @@ export default function Canvas() {
           const pd = parallelLineData(refLine.x1, refLine.y1, refLine.x2, refLine.y2, p.x, p.y);
           addLine({
             x1: pd.x1, y1: pd.y1, x2: pd.x2, y2: pd.y2,
-            notes: `Paralela a ${refLine.label} d=${pd.distance.toFixed(0)}`,
+            notes: `Paralela a ${refLine.label} d=${(pd.distance / (scale?.pixels ?? 1) * (scale?.meters ?? 1)).toFixed(1)}m`,
           });
         } else {
           const pd = perpendicularLineData(refLine.x1, refLine.y1, refLine.x2, refLine.y2, p.x, p.y);
@@ -579,7 +579,7 @@ export default function Canvas() {
             {preview && (
               <>
                 <Line points={[preview.x1, preview.y1, preview.x2, preview.y2]} stroke="#94a3b8" strokeWidth={2} dash={[5, 3]} listening={false} />
-                <Text x={(preview.x1 + preview.x2) / 2 + 10} y={(preview.y1 + preview.y2) / 2 - 10} text={`${dist(preview.x1, preview.y1, preview.x2, preview.y2).toFixed(0)}`} fontSize={11} fill="#94a3b8" listening={false} />
+                <Text x={(preview.x1 + preview.x2) / 2 + 10} y={(preview.y1 + preview.y2) / 2 - 10} text={scale ? `${(dist(preview.x1, preview.y1, preview.x2, preview.y2) / scale.pixels * scale.meters).toFixed(1)} m` : `${dist(preview.x1, preview.y1, preview.x2, preview.y2).toFixed(0)} px`} fontSize={11} fill={scale ? '#22c55e' : '#94a3b8'} listening={false} />
               </>
             )}
           </Group>
