@@ -16,6 +16,8 @@ function LineItem({ line, isSelected, onSelect, onUpdate, onRemove, scale }: {
   const [showDetail, setShowDetail] = useState(false);
   const [editingLen, setEditingLen] = useState(false);
   const [lenInput, setLenInput] = useState('');
+  const [editingAng, setEditingAng] = useState(false);
+  const [angInput, setAngInput] = useState('');
 
   const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -40,6 +42,21 @@ function LineItem({ line, isSelected, onSelect, onUpdate, onRemove, scale }: {
     const ny2 = line.y1 + Math.sin(angRad) * newPx;
     onUpdate({ x2: nx2, y2: ny2, lengthMeters: newMeters });
     setEditingLen(false);
+  };
+
+  const handleAngSubmit = () => {
+    const newDeg = parseFloat(angInput);
+    if (isNaN(newDeg)) {
+      setEditingAng(false);
+      return;
+    }
+    const newRad = newDeg * Math.PI / 180;
+    const pxLen = dist(line.x1, line.y1, line.x2, line.y2);
+    const nx2 = line.x1 + Math.cos(newRad) * pxLen;
+    const ny2 = line.y1 + Math.sin(newRad) * pxLen;
+    const newMeters = scale ? (pxLen / scale.pixels * scale.meters) : line.lengthMeters;
+    onUpdate({ x2: nx2, y2: ny2, lengthMeters: newMeters });
+    setEditingAng(false);
   };
 
   const inp = (label: string, key: string, val: any, opts?: { type?: string; placeholder?: string; step?: string }) => (
@@ -92,7 +109,27 @@ function LineItem({ line, isSelected, onSelect, onUpdate, onRemove, scale }: {
           </span>
         )}
       </div>
-      <div className="text-xs text-slate-500 mt-0.5">{ang.toFixed(1)}° {bearing(ang)}</div>
+      {!editingAng ? (
+        <button
+          onClick={(e) => { e.stopPropagation(); setEditingAng(true); setAngInput(ang.toFixed(1)); }}
+          className="text-xs text-slate-500 hover:text-slate-300 mt-0.5 text-left transition-colors"
+          title="Clic para editar azimut"
+        >
+          {ang.toFixed(1)}° {bearing(ang)} ✎
+        </button>
+      ) : (
+        <div className="flex items-center gap-0.5 mt-0.5" onClick={e => e.stopPropagation()}>
+          <input
+            type="number" step="any" min="0" max="360" value={angInput}
+            onChange={e => setAngInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') handleAngSubmit(); if (e.key === 'Escape') setEditingAng(false); }}
+            onBlur={handleAngSubmit}
+            className="w-16 text-[10px] bg-slate-800 border border-blue-500 rounded px-1 py-0.5 text-white text-right tabular-nums focus:outline-none"
+            autoFocus
+          />
+          <span className="text-[10px] text-slate-400">°</span>
+        </div>
+      )}
 
       {/* GPS start */}
       <div className="flex gap-1 mt-1.5" onClick={e => e.stopPropagation()}>
